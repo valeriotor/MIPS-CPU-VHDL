@@ -30,7 +30,7 @@ use IEEE.NUMERIC_STD.ALL;
 --use UNISIM.VComponents.all;
 
 entity HazardBuffer is
-    Port ( regWrite : in  STD_LOGIC;
+    Port ( enable : in  STD_LOGIC;
            writeReg : in  STD_LOGIC_VECTOR (4 downto 0);
            clock : in  STD_LOGIC;
            reset : in  STD_LOGIC;
@@ -60,7 +60,7 @@ elsif(rising_edge(clock)) then
 		dataIn <= "000000";
 	else
 		hazard <= '0';
-		if(regWrite = '1') then
+		if(enable = '1') then
 			dataIn <= '1' & writeReg;
 		else
 			dataIn <= "000000";

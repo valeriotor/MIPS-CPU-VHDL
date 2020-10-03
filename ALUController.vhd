@@ -44,7 +44,8 @@ Output <= "0000" when AluOp(1) = '1' and Func(3 downto 0) = "0100" else
 			 "0010" when AluOp(1) = '1' and Func(3 downto 0) = "0000" else
 			 "0110" when AluOp = "01"										 	 else
 			 "0110" when AluOp(1) = '1' and Func(3 downto 0) = "0010" else
-			 "0111" when AluOp(1) = '1' and Func(3 downto 0) = "1010";
+			 "0111" when AluOp(1) = '1' and Func(3 downto 0) = "1010" else
+			 "0000";
 
 end Behavioral;
 

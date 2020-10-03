@@ -47,9 +47,9 @@ if(rising_edge(clock)) then
 	case ALUctrl is
 		when "0000" => result <= in1 and in2;
 		when "0001" => result <= in1 or in2;
-		when "0010" => result <= std_logic_vector(unsigned(in1) + unsigned(in2));
-		when "0110" => result <= std_logic_vector(unsigned(in1) - unsigned(in2));
-		when "0111" => if(unsigned(in1) < unsigned(in2)) then
+		when "0010" => result <= std_logic_vector(signed(in1) + signed(in2));
+		when "0110" => result <= std_logic_vector(signed(in1) - signed(in2));
+		when "0111" => if(signed(in1) < signed(in2)) then
 								result <= "00000000000000000000000000000001";
 							else
 								result <= "00000000000000000000000000000000";

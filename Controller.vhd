@@ -103,8 +103,8 @@ if(rising_edge(clock) and enable = '0') then
 			when others => Jump <= '0';
 		end case;
 		case op_code is
-			when r_op => RegDst <= '1';
-			when others => RegDst <= '0';
+			when r_op => RegDst <= '0';
+			when others => RegDst <= '1';
 		end case;	
 end if;
 end process;

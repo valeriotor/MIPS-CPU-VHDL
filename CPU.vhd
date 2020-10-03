@@ -38,7 +38,8 @@ entity CPU is
 			  dataWrite : out STD_LOGIC_VECTOR(31 downto 0);
            dataAddr : out  STD_LOGIC_VECTOR (31 downto 0);
            memWriteOut : out  STD_LOGIC;
-           memReadOut : out  STD_LOGIC);
+           memReadOut : out  STD_LOGIC;
+			  debug : out STD_LOGIC_VECTOR(31 downto 0));
 end CPU;
 
 architecture Behavioral of CPU is
@@ -78,15 +79,13 @@ COMPONENT Controller
 END COMPONENT;
 COMPONENT HazardBuffer
     PORT(
-         regWrite : IN  std_logic;
+         enable : IN  std_logic;
          writeReg : IN  std_logic_vector(4 downto 0);
          clock : IN  std_logic;
          reset : IN  std_logic;
          checkReg1 : IN  std_logic_vector(4 downto 0);
          checkReg2 : IN  std_logic_vector(4 downto 0);
-         hazard : OUT  std_logic;
-			debug : OUT std_logic_vector(17 downto 0);
-			debug2 : OUT std_logic_vector(5 downto 0)
+         hazard : OUT  std_logic
         );
 END COMPONENT;
 COMPONENT PipeStep
@@ -129,6 +128,7 @@ COMPONENT Mux21
 		  );
 END COMPONENT;
 
+signal no_op : STD_LOGIC := '0';
 signal long_clock : STD_LOGIC := '0';
 signal instr_address_sig : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
 signal next_instr_address : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
@@ -172,6 +172,7 @@ signal MEMWBSigs : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
 signal WBSigs : STD_LOGIC_VECTOR(1 downto 0) := (others => '0');
 signal ALUResMem : STD_LOGIC_VECTOR(31 downto 0):= (others => '0');
 signal finalWriteData : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+signal hazardEnable : STD_LOGIC := '0';
 constant four : STD_LOGIC_VECTOR(2 downto 0) := "100";
 signal Hazard : STD_LOGIC := '0';
 
@@ -185,10 +186,15 @@ pipe3in <= MEMWBSigs & BranchAddEx & zero & ALUResult & RD2EXStage & WriteRegEx;
 pipe4in <= WBSigs & dataRead & ALUResMem & WriteRegMem;
 
 dataAddr <= ALUResMem;
+Branch_addr <= pipe3out(101 downto 70);
 
 finalWriteData <= pipe4out(68 downto 37) when pipe4out(70) = '1' else
 					  pipe4out(36 downto 5);
-					  
+					 
+debug <= "00000000000000000" & WriteRegMem & WriteRegEx & WriteReg;					 
+no_op <= '1' when unsigned(pipe1out(31 downto 0)) = 0 else
+			'0';
+hazardEnable <= RegWrite and not no_op;
 immediate <= "1111111111111111" & pipe2out(15 downto 0) when pipe2out(15) = '1' else
 				 "0000000000000000" & pipe2out(15 downto 0);
 				 
@@ -199,7 +205,7 @@ PCIn <= Branch_Addr when PCSrc = '1' else
 		  pipe1out(63 downto 32) when Hazard = '1' else
 		  next_instr_address;
 
-PCSRC <= pipe3out(103) and pipe3out(69);
+PCSRC <= pipe3out(104) and pipe3out(69);
 
 ALUIn2 <= RD2EXStage when pipe2out(117) = '0' else -- pipe2out = ALUSrc
 			  immediate;
@@ -245,7 +251,7 @@ Control : Controller
 					RegWrite => RegWrite);
 					
 HazardDetector : HazardBuffer
-		PORT MAP(regWrite => RegWrite,
+		PORT MAP(enable => hazardEnable,
 					writeReg => WriteReg,
 					clock => long_clock,
 					reset => reset,
@@ -293,7 +299,7 @@ if(reset = '1') then
 	long_clock <= '0';
 elsif(falling_edge(clock)) then
 	long_clock <= not long_clock;
-elsif(rising_edge(clock) and long_clock = '0') then
+elsif(rising_edge(clock)) then
 	if(long_clock = '0') then -- should be used for saving pipe data to transfer to the next pipe as well as for MemStage
 		next_instr_address <= std_logic_vector(unsigned(pipe1out(63 downto 32)) + unsigned(four));
 		part_instr_holder <= pipe1out(15 downto 0);
@@ -303,7 +309,7 @@ elsif(rising_edge(clock) and long_clock = '0') then
 			WriteReg <=	pipe1out(15 downto 11);
 		end if;
 		RD2EXStage <= pipe2out(52 downto 21);
-		BranchAddEx <= std_logic_vector(unsigned(pipe2out(116 downto 85)) + unsigned(shifted_imm));
+		BranchAddEx <= std_logic_vector(signed(pipe2out(116 downto 85)) + signed(shifted_imm));
 		MEMWBSigs <= pipe2out(124 downto 120);
 		WriteRegEx <= pipe2out(20 downto 16);
 		memWriteOut <= pipe3out(103);
@@ -313,7 +319,7 @@ elsif(rising_edge(clock) and long_clock = '0') then
 		WBSigs <= pipe3out(106 downto 105);
 		WriteRegMem <= pipe3out(4 downto 0);
 	else -- should be used for resets
-		pipe2reset <= reset or Hazard or PCSrc;
+		pipe2reset <= reset or Hazard or PCSrc or no_op;
 		pipe3reset <= reset or PCSrc;
 	end if;
 end if;
