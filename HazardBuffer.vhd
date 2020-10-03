@@ -36,9 +36,7 @@ entity HazardBuffer is
            reset : in  STD_LOGIC;
            checkReg1 : in  STD_LOGIC_VECTOR (4 downto 0);
            checkReg2 : in  STD_LOGIC_VECTOR (4 downto 0);
-           hazard : out  STD_LOGIC;
-			  debug : out STD_LOGIC_VECTOR(17 downto 0);
-			  debug2 : out STD_LOGIC_VECTOR(5 downto 0));
+           hazard : out  STD_LOGIC);
 end HazardBuffer;
 
 architecture Behavioral of HazardBuffer is
@@ -47,8 +45,6 @@ signal data : std_logic_vector(17 downto 0) := (others => '0');
 signal dataIn : std_logic_vector(5 downto 0) := (others => '0');
 begin
 
-debug <= data;
-debug2 <= dataIn;
 process(clock,reset)
 begin
 if(reset = '1') then

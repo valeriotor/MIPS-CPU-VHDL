@@ -30,8 +30,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 --use UNISIM.VComponents.all;
 
 entity ProgramCounter is
-    Port ( clock : in  STD_LOGIC;
-           reset : in  STD_LOGIC;
+    Port ( clock  : in  STD_LOGIC;
+			  enable : in  STD_LOGIC;
+           reset  : in  STD_LOGIC;
            next_address : in  STD_LOGIC_VECTOR (31 downto 0);
            address : out  STD_LOGIC_VECTOR (31 downto 0));
 end ProgramCounter;
@@ -42,7 +43,7 @@ update : process(clock,reset)
 begin
 if(reset = '1') then
 	address <= (others => '0');
-elsif(rising_edge(clock)) then
+elsif(rising_edge(clock) and enable = '1') then
 	address <= next_address;
 end if;
 end process;
