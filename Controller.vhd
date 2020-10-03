@@ -58,7 +58,7 @@ constant sw   : std_logic_vector(5 downto 0) := "101011";
 begin
 process(clock)
 begin
-if(rising_edge(clock) and enable = '1') then
+if(rising_edge(clock) and enable = '0') then
 		
 		case op_code is
 			when r_op => RegWrite <= '1';
