@@ -39,7 +39,8 @@ entity CPU is
            dataAddr : out  STD_LOGIC_VECTOR (31 downto 0);
            memWriteOut : out  STD_LOGIC;
            memReadOut : out  STD_LOGIC;
-			  debug : out STD_LOGIC_VECTOR(31 downto 0));
+			  debug : out STD_LOGIC_VECTOR(31 downto 0);
+			  debug2 : out STD_LOGIC_VECTOR(31 downto 0));
 end CPU;
 
 architecture Behavioral of CPU is
@@ -50,6 +51,7 @@ COMPONENT ALU
          in2 : IN  std_logic_vector(31 downto 0);
          ALUctrl : IN  std_logic_vector(3 downto 0);
          clock : IN  std_logic;
+			long_clock : IN std_logic;
          result : INOUT  std_logic_vector(31 downto 0);
          zero : OUT  std_logic
         );
@@ -160,6 +162,7 @@ signal Branch_Addr : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
 signal ReadData1 : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
 signal ReadData2 : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
 signal WriteReg : STD_LOGIC_VECTOR(4 downto 0) := (others => '0'); -- Address ID Stage
+signal WriteRegBuf : STD_LOGIC_VECTOR(4 downto 0) := (others => '0'); -- Address ID Stage to be taken by pipe2in
 signal WriteRegEx : STD_LOGIC_VECTOR(4 downto 0) := (others => '0'); -- Address EX Stage
 signal WriteRegMem : STD_LOGIC_VECTOR(4 downto 0) := (others => '0'); -- Address MEM Stage
 signal ALUMode : STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
@@ -180,8 +183,11 @@ begin
 
 instr_addr <= instr_address_sig;
 
+WriteReg <= pipe1out(20 downto 16) when RegDst = '1' else
+			   pipe1out(15 downto 11);
+				
 pipe1in <= instr_address_sig & instruction;
-pipe2in <= MemToReg & RegWrite & Branch & MemWrite & MemRead & ALUOp & ALUSrc & next_instr_address & ReadData1 & ReadData2 & WriteReg & part_instr_holder;
+pipe2in <= MemToReg & RegWrite & Branch & MemWrite & MemRead & ALUOp & ALUSrc & next_instr_address & ReadData1 & ReadData2 & WriteRegBuf & part_instr_holder;
 pipe3in <= MEMWBSigs & BranchAddEx & zero & ALUResult & RD2EXStage & WriteRegEx;
 pipe4in <= WBSigs & dataRead & ALUResMem & WriteRegMem;
 
@@ -191,7 +197,12 @@ Branch_addr <= pipe3out(101 downto 70);
 finalWriteData <= pipe4out(68 downto 37) when pipe4out(70) = '1' else
 					  pipe4out(36 downto 5);
 					 
-debug <= "00000000000000000" & WriteRegMem & WriteRegEx & WriteReg;					 
+--debug <= "00000000000" & RegDst & WriteRegMem & WriteRegEx & WriteRegBuf & WriteReg;
+--debug <= pipe2out(84 downto 53);
+--debug <= (1 => pipe3out(104), 0 => pipe3out(69), others => '0');
+debug <= ALUResult;
+debug2 <= (0 => zero, others => '0');
+
 no_op <= '1' when unsigned(pipe1out(31 downto 0)) = 0 else
 			'0';
 hazardEnable <= RegWrite and not no_op;
@@ -275,7 +286,8 @@ Arith : ALU
 		PORT MAP(in1 => pipe2out(84 downto 53),
 					in2 => ALUIn2,
 					ALUctrl => ALUMode,
-					clock => long_clock,
+					clock => clock,
+					long_clock => long_clock,
 					result => ALUResult,
 					zero => zero);
         
@@ -303,11 +315,6 @@ elsif(rising_edge(clock)) then
 	if(long_clock = '0') then -- should be used for saving pipe data to transfer to the next pipe as well as for MemStage
 		next_instr_address <= std_logic_vector(unsigned(pipe1out(63 downto 32)) + unsigned(four));
 		part_instr_holder <= pipe1out(15 downto 0);
-		if(RegDst = '0') then
-			WriteReg <= pipe1out(20 downto 16);
-		else
-			WriteReg <=	pipe1out(15 downto 11);
-		end if;
 		RD2EXStage <= pipe2out(52 downto 21);
 		BranchAddEx <= std_logic_vector(signed(pipe2out(116 downto 85)) + signed(shifted_imm));
 		MEMWBSigs <= pipe2out(124 downto 120);
@@ -321,6 +328,7 @@ elsif(rising_edge(clock)) then
 	else -- should be used for resets
 		pipe2reset <= reset or Hazard or PCSrc or no_op;
 		pipe3reset <= reset or PCSrc;
+		WriteRegBuf <= WriteReg;
 	end if;
 end if;
 end process;

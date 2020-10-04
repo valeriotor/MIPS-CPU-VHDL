@@ -34,30 +34,32 @@ entity ALU is
            in2 : in  STD_LOGIC_VECTOR (31 downto 0);
            ALUctrl : in  STD_LOGIC_VECTOR (3 downto 0);
            clock : in  STD_LOGIC;
+			  long_clock : in STD_LOGIC;
            result : inout  STD_LOGIC_VECTOR (31 downto 0);
            zero : out  STD_LOGIC);
 end ALU;
 
 architecture Behavioral of ALU is
-
+constant zeroConst : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
 begin
-compute:process(clock)
+compute:process(long_clock, clock)
 begin
-if(rising_edge(clock)) then
+if(rising_edge(long_clock)) then
 	case ALUctrl is
 		when "0000" => result <= in1 and in2;
 		when "0001" => result <= in1 or in2;
 		when "0010" => result <= std_logic_vector(signed(in1) + signed(in2));
 		when "0110" => result <= std_logic_vector(signed(in1) - signed(in2));
 		when "0111" => if(signed(in1) < signed(in2)) then
-								result <= "00000000000000000000000000000001";
+								result <= (0 => '1', others => '0');
 							else
-								result <= "00000000000000000000000000000000";
+								result <= (others => '0');
 							end if;
 		when "1100" => result <= in1 nor in2;
 		when others => report "ERROR: unknown ALUctrl code" severity failure;
 	end case;
-	if(result = "00000000000000000000000000000000") then
+elsif(rising_edge(clock) and long_clock = '1') then
+	if(result = zeroConst) then
 		zero <= '1';
 	else
 		zero <= '0';
