@@ -31,6 +31,8 @@ USE ieee.std_logic_1164.ALL;
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
 USE ieee.numeric_std.ALL;
+USE ieee.std_logic_textio.ALL;
+USE std.textio.ALL;
  
 ENTITY CPUTestBasic IS
 END CPUTestBasic;
@@ -80,15 +82,6 @@ ARCHITECTURE behavior OF CPUTestBasic IS
 	signal intInstrAddr : integer := 0;
 	signal intDataAddr  : integer := 0;
 	
-	--Instructions
-	constant firstInstr   : STD_LOGIC_VECTOR(31 downto 0) := "00100001000010000000000001000000"; -- addi t0 t0 64
-	constant secondInstr : STD_LOGIC_VECTOR(31 downto 0) := "00100001001010010000000001000000"; -- addi t1 t1 64
-	constant thirdInstr  : STD_LOGIC_VECTOR(31 downto 0) := "10101101000010010000000000000000"; -- sw t1 0(t0)
-	constant fourthInstr : STD_LOGIC_VECTOR(31 downto 0) := "00010001001010001111111111111101"; -- beq t1 t0 -3
-	constant fifthInstr   : STD_LOGIC_VECTOR(31 downto 0) := "10001101001010100000000000000000"; -- lw t2 0(t1)
-	constant sixthInstr  : STD_LOGIC_VECTOR(31 downto 0) := "10101101001010100000000000000000"; -- sw t2 0(t0)
-	constant seventhInstr: STD_LOGIC_VECTOR(31 downto 0) := "00001000000000000000000000000001"; -- j 1
-	
  
 BEGIN
 intInstrAddr <= to_integer(unsigned(instr_addr));
@@ -134,35 +127,21 @@ dataRead <= RAM(intDataAddr) & RAM(intDataAddr+1) & RAM(intDataAddr+2) & RAM(int
 
    -- Stimulus process
    stim_proc: process
+		variable line_v : line;
+		file read_file : text;
+		variable current_vector : std_logic_vector(31 downto 0);
+		variable i : integer := 4;
    begin		
-      RAM(4)  <= firstInstr(31 downto 24);
-		RAM(5)  <= firstInstr(23 downto 16);
-		RAM(6)  <= firstInstr(15 downto 8);
-		RAM(7)  <= firstInstr(7 downto 0);
-      RAM(8)  <= secondInstr(31 downto 24);
-		RAM(9)  <= secondInstr(23 downto 16);
-		RAM(10)  <= secondInstr(15 downto 8);
-		RAM(11)  <= secondInstr(7 downto 0);
-      RAM(12) <= thirdInstr(31 downto 24);
-		RAM(13) <= thirdInstr(23 downto 16);
-		RAM(14) <= thirdInstr(15 downto 8);
-		RAM(15) <= thirdInstr(7 downto 0);
-      RAM(16) <= fourthInstr(31 downto 24);
-		RAM(17) <= fourthInstr(23 downto 16);
-		RAM(18) <= fourthInstr(15 downto 8);
-		RAM(19) <= fourthInstr(7 downto 0);
-      RAM(20) <= fifthInstr(31 downto 24);
-		RAM(21) <= fifthInstr(23 downto 16);
-		RAM(22) <= fifthInstr(15 downto 8);
-		RAM(23) <= fifthInstr(7 downto 0);
-      RAM(24) <= sixthInstr(31 downto 24);
-		RAM(25) <= sixthInstr(23 downto 16);
-		RAM(26) <= sixthInstr(15 downto 8);
-		RAM(27) <= sixthInstr(7 downto 0);
-      RAM(28) <= seventhInstr(31 downto 24);
-		RAM(29) <= seventhInstr(23 downto 16);
-		RAM(30) <= seventhInstr(15 downto 8);
-		RAM(31) <= seventhInstr(7 downto 0);
+		file_open(read_file, "source.txt", read_mode);
+		while not endfile(read_file) loop
+			readline(read_file, line_v);
+			read(line_v, current_vector);
+			RAM(i) <= current_vector(31 downto 24);
+			RAM(i+1) <= current_vector(23 downto 16);
+			RAM(i+2) <= current_vector(15 downto 8);
+			RAM(i+3) <= current_vector(7 downto 0);
+			i := i+4;
+		end loop;
 		RAM(128) <= "11111111";
 		reset <= '1';
       wait for 100 ns;	
